@@ -1,0 +1,66 @@
+KUŹNIA • BROKEN RANKS — EKSPORT STRONY
+
+Eksport opublikowanej wersji 6, przygotowany 15.10.2026.
+Zawiera bieżącą stronę wraz z optymalizatorem, plecakiem drifów i orbów,
+umiejętnościami wszystkich klas oraz katalogiem ekwipunku.
+
+1. CO JEST W PACZCE
+
+index.html                 — strona wejściowa
+style.css                  — wygląd strony
+app.js i pozostałe *.js    — pełny, edytowalny kod JavaScript
+optimizer-worker.js        — obliczenia optymalizatora w tle
+catalog.json               — katalog przedmiotów i setów
+skills.json                — umiejętności, opisy i wartości
+drifs.json                 — katalog drifów i odnośniki do ich grafik
+assets/                    — 558 grafik przedmiotów, drifów i umiejętności
+uruchom.py                 — lokalny serwer i otwarcie strony w przeglądarce
+URUCHOM-WINDOWS.bat         — skrót do uruchomienia przez Python Launcher
+DOKUMENTACJA.md             — opis mechaniki i pochodzenia danych
+
+Wszystkie pliki strony zachowano bez zmian względem opublikowanej wersji.
+Nie jest potrzebne kompilowanie projektu ani instalowanie pakietów npm.
+
+2. JAK URUCHOMIĆ LOKALNIE
+
+Najpierw rozpakuj CAŁY ZIP do jednego folderu, zachowując strukturę assets/.
+Strona używa modułów JavaScript i wczytuje pliki JSON, dlatego otwieranie
+index.html bezpośrednio przez file:// może nie działać.
+
+Wygodna metoda (wymaga Pythona 3):
+- Windows: uruchom URUCHOM-WINDOWS.bat, jeśli masz Python Launcher (py).
+  Alternatywnie w terminalu, w folderze strony: python uruchom.py
+- macOS / Linux: w terminalu, w folderze strony: python3 uruchom.py
+
+Program otworzy stronę w domyślnej przeglądarce i poda jej adres w terminalu.
+Serwer nasłuchuje tylko na 127.0.0.1. Pozostaw terminal otwarty podczas pracy.
+Aby zakończyć, naciśnij Ctrl+C w terminalu.
+
+Możesz też użyć własnego serwera HTTP, np. rozszerzenia Live Server w edytorze.
+Uruchomienie Pythona nie jest potrzebne na hostingu statycznym.
+
+3. JAK PRZENIEŚĆ NA HOSTING
+
+Wgraj index.html, style.css, wszystkie pliki *.js, *.json oraz cały folder
+assets/ do jednego katalogu serwowanego przez hosting statyczny.
+Zachowaj nazwy plików i katalogów. Strona nie wymaga bazy danych, procesu
+Node.js ani usług Sites. Pliki uruchom.py, BAT i dokumentacja są opcjonalne
+na hostingu — służą do pracy lokalnej i informacji o projekcie.
+
+4. ZAPISANE BUILDY I DANE
+
+Buildy zapisane przyciskiem „Zapisz na tym urządzeniu” znajdują się
+w przeglądarce i są przypisane do adresu strony. Sam eksport strony ich
+nie przenosi. Na dotychczasowej stronie użyj „Eksport buildu”, a następnie
+w lokalnej kopii wybierz „Wczytaj plik” albo „Wklej build”.
+
+Grafiki i katalogi danych są dołączone do paczki. Arkusz CSS pobiera opcjonalne
+czcionki Google Fonts z internetu; bez internetu używane są czcionki zastępcze.
+Odnośniki do WikiBR prowadzą do zewnętrznego źródła danych i grafik.
+
+5. EDYCJA
+
+Możesz edytować HTML, CSS, JavaScript i JSON bezpośrednio. Po zmianach odśwież
+stronę. Zasady obliczeń są w engine.js, wyszukiwanie układu w optimizer.js,
+a interfejs optymalizatora w optimizer-ui.js. Szczegóły i ograniczenia modelu
+opisano w DOKUMENTACJA.md. Grafiki i dane zachowują oryginalne źródła WikiBR.

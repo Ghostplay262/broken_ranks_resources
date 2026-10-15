@@ -1,0 +1,35 @@
+import {STATS,LABELS,MODS,ORBS,PROFESSIONS,allowedOrbs} from './engine.js';
+
+export const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('pl-PL',{maximumFractionDigits:2});
+export function itemImage(item){return `<span class="slot-icon" aria-hidden="true">${item?.image?`<img src="${esc(item.image)}" alt="" loading="lazy" decoding="async">`:`<span>${item?.slot==='weapon'?'⚔':'◈'}</span>`}</span>`;}
+
+export function psychoBars(result){
+ const rows=Object.values(result.psycho).filter(p=>!['pa','circle','fate'].includes(p.code)).sort((a,b)=>b.value-a.value);
+ const scale=Math.max(100,...rows.map(p=>Math.ceil(p.value/25)*25));
+ return `<section class="panel psycho-panel"><div class="panel-heading"><h2>Efekty drifów</h2><span class="badge">%</span></div><div class="panel-body">${rows.length?rows.map(p=>`<div class="psycho-bar-row"><div class="bar-label"><strong>${esc(p.code)}</strong><b class="${p.wasted?'gold':'cyan'}">${fmt(p.value)}%</b></div><div class="psycho-track" role="meter" aria-label="${esc(MODS[p.code].label)}" aria-valuemin="0" aria-valuemax="${scale}" aria-valuenow="${p.value}" aria-valuetext="${fmt(p.value)} procent${p.cap?', limit '+p.cap+' procent':''}"><span style="width:${p.value/scale*100}%"></span>${p.cap?`<i style="left:${p.cap/scale*100}%" title="Limit ${p.cap}%"></i>`:''}</div><div class="bar-caption">${esc(MODS[p.code].label)}${p.wasted?` <b>· ${fmt(p.wasted)}% ponad limit</b>`:''}</div></div>`).join(''):'<p class="inline-note">Osadź drify lub wybierz bonus synergetyka, aby zobaczyć paski efektów.</p>'}<p class="inline-note">Wynik po karze i limitach, z bonusami setów i synergetyków. Wspólna skala: 0–${scale}%. Kreska oznacza twardy limit.</p></div></section>`;
+}
+
+export {skillRank,skillsView,skillsComparison} from './skill-ui.js';
+
+export function snapshotView(inst,item){
+ const snap=inst.snapshot;if(!snap)return '';
+ return `<div class="editor-section"><div class="section-title"><h3>Rzeczywiste statystyki</h3><span class="badge">Z EKSPORTU</span></div><p class="inline-note">Zachowano wynik inkrustacji i dotychczasowych ulepszeń. Eksport nie pozwala odtworzyć ich kolejności. Zmiana poziomu ornamentu wymaga rozpoczęcia nowej symulacji tego przedmiotu.</p>${snap.missing.length?`<div class="notice">Do potwierdzenia: ${snap.missing.map(k=>LABELS[k]).join(', ')}. <button class="small" data-action="resolve-import">Uzupełnij import</button></div>`:''}<details><summary>Edytuj wartości z gry</summary><div class="form-grid snapshot-grid">${Object.keys(LABELS).filter(k=>snap.stats[k]||snap.missing.includes(k)).map(k=>`<label>${LABELS[k]}<input type="number" min="0" max="100000" step="1" data-snapshot="${k}" value="${snap.stats[k]||0}"></label>`).join('')}</div></details><button class="small" data-action="plan-item">Nowa symulacja od bazy</button></div>`;
+}
+
+export function importShell(){return `<div class="dialog-head"><div><div class="eyebrow">EKSPORT Z NAKŁADKI LUB KUŹNI</div><h2>Wklej build</h2></div><button class="icon-button" data-action="close-import" aria-label="Zamknij">×</button></div><div class="panel-body"><label for="paste-text" class="small-text">Wklej skopiowany eksport (Ctrl+V)</label><textarea id="paste-text" spellcheck="false" placeholder='{"stats": …, "skills": …, "equipped": …}'></textarea><div class="actions"><button data-action="paste-clipboard">Wklej ze schowka</button><button class="primary" data-action="parse-paste">Sprawdź eksport</button></div><p class="inline-note">Import jest przetwarzany w tej przeglądarce. Tekst nie jest wysyłany na serwer.</p><div id="paste-preview" aria-live="polite"></div></div>`;}
+
+export function importPreview(parsed){const b=parsed.build;return `<div class="import-preview"><div class="eyebrow">${esc(parsed.format)}</div><h3>${esc(b.name)}</h3><div class="import-counts"><span><b>${b.level}</b> poziom</span><span><b>${Object.keys(b.equipment).length}/12</b> przedmiotów</span><span><b>${b.skills.length}</b> wpisów umiejętności</span><span><b>${b.backpack?.length||0}</b> drifów w plecaku</span></div><div class="fields"><label>Profesja<select id="import-profession">${PROFESSIONS.map(p=>`<option value="${esc(p)}" ${p===b.profession?'selected':''}>${esc(p)}</option>`).join('')}</select></label>${parsed.format!=='Kuźnia'?'<label class="check"><input id="import-charged" type="checkbox" checked>Sprzęt naładowany</label>':''}</div>${parsed.notes.length?`<ul class="rules-list small-text">${parsed.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`:''}<p class="inline-note">Wczytanie zastąpi bieżący build. Obecną wersję możesz wcześniej wyeksportować.</p><button class="primary full-width" data-action="accept-import">Wczytaj ten build</button></div>`;}
+
+export function resolveDialog(build,catalog,resolveItem){
+ const missing=[],orbs=new Map();
+ for(const [slot,ins] of Object.entries(build.equipment)){
+  const item=resolveItem(ins,catalog);
+  for(const stat of ins.snapshot?.missing||[])missing.push({slot,stat,value:ins.snapshot.stats[stat]||0,item});
+  for(const o of ins.orbs)if(!o.code){
+   if(!orbs.has(o.sourceCode))orbs.set(o.sourceCode,{code:o.sourceCode,effect:o.exportEffect,items:[],types:allowedOrbs(item)});
+   const row=orbs.get(o.sourceCode);row.items.push(item.name);row.types=row.types.filter(t=>allowedOrbs(item).includes(t));
+  }
+ }
+ return `<form id="resolve-form"><div class="dialog-head"><h2>Uzupełnij dane z eksportu</h2><button type="button" class="icon-button" data-action="close-resolve" aria-label="Zamknij">×</button></div><div class="panel-body">${missing.length?`<h3>Wartości brakujące w eksporcie</h3><p class="inline-note">Poniżej są wstępne wartości z katalogu. Sprawdź końcowe statystyki na przedmiotach w grze i popraw je przed zapisaniem.</p><div class="resolve-grid">${missing.map(m=>`<label class="resolve-field">${itemImage(m.item)}<span><b>${esc(m.item.name)}</b><small>${LABELS[m.stat]}</small></span><input type="number" min="0" max="100000" step="1" required data-resolve-slot="${m.slot}" data-resolve-stat="${m.stat}" value="${m.value}" aria-label="${esc(m.item.name)}: ${LABELS[m.stat]}"></label>`).join('')}</div>`:''}${orbs.size?`<h3>Nazwy orbów</h3><p class="inline-note">Kod numeryczny nie określa dla nas nazwy. Wybierz efekt widoczny w grze; procent z eksportu pozostanie zachowany.</p><div class="orb-mapping">${[...orbs.values()].map(o=>`<label><strong>Kod ${o.code} · ${fmt(o.effect)}%</strong><small>${esc([...new Set(o.items)].join(', '))}</small><select data-map-orb="${o.code}"><option value="">Wybierz orb…</option>${Object.values(ORBS).filter(def=>o.types.includes(def.type)).map(def=>`<option value="${esc(def.code)}">${esc(def.code+' · '+def.label)}</option>`).join('')}</select></label>`).join('')}</div>`:''}${!missing.length&&!orbs.size?'<p>Wszystkie brakujące dane zostały uzupełnione.</p>':''}</div><div class="dialog-foot"><button type="submit" class="primary">Zapisz uzupełnienia</button></div></form>`;
+}
