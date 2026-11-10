@@ -1,9 +1,7 @@
 
 import pulp
 
-# ==========================================
-# 1. DANE WEJSCIOWE
-# ==========================================
+# dane wejściowe
 
 items = {
     "Helmet": {"capacity": 10},
@@ -43,9 +41,7 @@ drifs = {
     },
 }
 
-# Przelicznik bonusu modyfikatora na Power.
-# Wartości przykładowe - do zastąpienia
-# rzeczywistym wzorem Power.
+# przelicznik bonusu modyfikatora na power
 
 power_per_mod = {
     "strength": 1.0,
@@ -53,9 +49,7 @@ power_per_mod = {
     "critical": 1.2,
 }
 
-# ==========================================
-# 2. TABELA EFEKTYWNOSCI
-# ==========================================
+# tabela efektywności
 
 efficiency = {
     0: 1.00,
@@ -75,9 +69,7 @@ efficiency = {
 
 MAX_REPEATS = 12
 
-# ==========================================
-# 3. TWORZENIE MODELU
-# ==========================================
+# model
 
 model = pulp.LpProblem(
     "Broken_Ranks_Power_Optimizer",
@@ -92,9 +84,7 @@ modifiers = sorted(set(
     for m in d["mods"]
 ))
 
-# ==========================================
-# 4. ZMIENNE DECYZYJNE
-# ==========================================
+# zmienne decyzyjne
 
 # x[d,i] - liczba drifow typu d w przedmiocie i
 
@@ -121,7 +111,7 @@ y = {
 }
 
 # w[m,k,d,i] - iloczyn x[d,i] * y[m,k]
-# Zmienne pomocnicze do linearyzacji
+# zmienne pomocnicze do linearyzacji
 
 w = {}
 
@@ -138,11 +128,10 @@ for m in modifiers:
                     cat=pulp.LpInteger
                 )
 
-# ==========================================
-# 5. OGRANICZENIA PODSTAWOWE
-# ==========================================
 
-# A. Dostepna liczba drifow
+# ograniczenia
+
+# dostepna liczba drifow
 
 for d in drifs:
     model += (
@@ -150,7 +139,7 @@ for d in drifs:
         <= drifs[d]["quantity"]
     )
 
-# B. Pojemnosc przedmiotow
+# pojemnosc przedmiotow
 
 for i in items:
     model += (
@@ -161,13 +150,12 @@ for i in items:
         <= items[i]["capacity"]
     )
 
-# ==========================================
-# 6. LICZBA POWTORZEN MODYFIKATOROW
-# ==========================================
+
+# powtórzenia modyfikatorów
 
 for m in modifiers:
 
-    # Liczba wszystkich drifow dajacych modyfikator m
+    # liczba wszystkich drifow dajacych modyfikator m
 
     count = pulp.lpSum(
         x[d, i]
@@ -176,7 +164,7 @@ for m in modifiers:
         for i in items
     )
 
-    # Maksymalna liczba dostepnych drifow z modyfikatorem m
+    # maksymalna liczba dostepnych drifow z modyfikatorem m
 
     upper = sum(
         drifs[d]["quantity"]
@@ -184,7 +172,7 @@ for m in modifiers:
         if m in drifs[d]["mods"]
     )
 
-    # Wybor dokladnie jednego poziomu efektywnosci
+    # wybor dokladnie jednego poziomu efektywnosci
 
     model += (
         pulp.lpSum(
@@ -193,7 +181,7 @@ for m in modifiers:
         ) == 1
     )
 
-    # Liczba wystapien musi odpowiadac wybranemu poziomowi
+    # liczba wystapien musi odpowiadac wybranemu poziomowi
 
     model += (
         count == pulp.lpSum(
@@ -202,13 +190,11 @@ for m in modifiers:
         )
     )
 
-    # Ograniczenie zakresu tabeli
+    # ograniczenie zakresu tabeli
 
     model += count <= MAX_REPEATS
 
-    # ======================================
-    # 7. LINEARYZACJA ILOCZYNU ZMIENNYCH
-    # ======================================
+    # linearyzacja iloczynu x[d,i] * y[m,k]
 
     for k in range(MAX_REPEATS + 1):
 
@@ -237,9 +223,8 @@ for m in modifiers:
                     - drifs[d]["quantity"] * (1 - y[m, k])
                 )
 
-# ==========================================
-# 8. EFEKTYWNE BONUSY MODYFIKATOROW
-# ==========================================
+
+# efektywne bonusy modyfikatorów
 
 effective_mods = {}
 
@@ -256,9 +241,8 @@ for m in modifiers:
         for i in items
     )
 
-# ==========================================
-# 9. FUNKCJA CELU - MAKSYMALIZACJA POWER
-# ==========================================
+
+# maksymalizacja powera
 
 base_power = pulp.lpSum(
     drifs[d]["power"] * x[d, i]
@@ -273,17 +257,13 @@ modifier_power = pulp.lpSum(
 
 model += base_power + modifier_power
 
-# ==========================================
-# 10. ROZWIAZANIE
-# ==========================================
+# rozwiązanie
 
 solver = pulp.PULP_CBC_CMD(msg=False)
 
 model.solve(solver)
 
-# ==========================================
-# 11. PREZENTACJA WYNIKOW
-# ==========================================
+# wyniki
 
 status = pulp.LpStatus[model.status]
 
